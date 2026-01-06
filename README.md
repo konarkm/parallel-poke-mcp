@@ -44,6 +44,7 @@ Set these environment variables in your deployment platform:
 | `WEBHOOK_BASE_URL` | Yes | Your deployed server URL (e.g., `https://your-app.onrender.com`) |
 | `PARALLEL_WEBHOOK_SECRET` | No | Webhook signing secret for verification (recommended) |
 | `MCP_AUTH_TOKEN` | No | If set, MCP clients must send `Authorization: Bearer <token>` |
+| `NOTIFY_COMPLETION_EVENTS` | No | If true, send completion (no-change) notifications (default false) |
 
 ## Connect to Poke
 
@@ -89,6 +90,8 @@ Webhook event types supported by the API:
 - `monitor.execution.failed`
 
 Use `update_monitor` to set `webhook_event_types` if you want completion/failure notifications.
+
+By default, completion events are ignored. Set `NOTIFY_COMPLETION_EVENTS=true` to send them.
 Metadata values must be strings (Parallel API requirement).
 
 ## Local Development

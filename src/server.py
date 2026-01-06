@@ -35,6 +35,7 @@ WEBHOOK_BASE_URL = os.environ.get("WEBHOOK_BASE_URL", "")  # Your deployed serve
 
 PARALLEL_API_BASE = "https://api.parallel.ai/v1alpha"
 MCP_AUTH_TOKEN = os.environ.get("MCP_AUTH_TOKEN", "")
+NOTIFY_COMPLETION_EVENTS = os.environ.get("NOTIFY_COMPLETION_EVENTS", "false").lower() == "true"
 
 # -----------------------------------------------------------------------------
 # Initialize FastMCP
@@ -240,6 +241,8 @@ async def parallel_webhook(request: Request) -> JSONResponse:
         # Handle non-detected event types (completed/failed) that don't include event_group_id
         event_type = payload.get("type", "")
         if event_type in ("monitor.execution.completed", "monitor.execution.failed"):
+            if event_type == "monitor.execution.completed" and not NOTIFY_COMPLETION_EVENTS:
+                return JSONResponse({"status": "ok", "event_type": event_type})
             try:
                 monitor = fetch_monitor(monitor_id)
             except Exception as e:
