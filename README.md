@@ -20,11 +20,11 @@ And you'll automatically get SMS notifications when any monitor detects changes.
 
 ### Option 1: Render (Recommended)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/YOUR_USERNAME/parallel-poke-mcp)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/konarkm/parallel-poke-mcp)
 
 ### Option 2: Railway
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/YOUR_USERNAME/parallel-poke-mcp)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/konarkm/parallel-poke-mcp)
 
 ### Option 3: Manual Deployment
 
