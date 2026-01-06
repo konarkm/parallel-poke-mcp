@@ -20,6 +20,7 @@ load_dotenv()
 
 import httpx
 from fastmcp import FastMCP
+from fastmcp.server.auth.providers.debug import DebugTokenVerifier
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -33,10 +34,19 @@ POKE_API_KEY = os.environ.get("POKE_API_KEY", "")
 WEBHOOK_BASE_URL = os.environ.get("WEBHOOK_BASE_URL", "")  # Your deployed server URL
 
 PARALLEL_API_BASE = "https://api.parallel.ai/v1alpha"
+MCP_AUTH_TOKEN = os.environ.get("MCP_AUTH_TOKEN", "")
 
 # -----------------------------------------------------------------------------
 # Initialize FastMCP
 # -----------------------------------------------------------------------------
+
+auth_provider = None
+if MCP_AUTH_TOKEN:
+    auth_provider = DebugTokenVerifier(
+        validate=lambda token: token == MCP_AUTH_TOKEN,
+        client_id="parallel-poke-mcp",
+        scopes=["mcp:access"],
+    )
 
 mcp = FastMCP(
     "Parallel Monitor Bridge",
@@ -55,6 +65,7 @@ mcp = FastMCP(
     When creating a monitor, pick a clear query describing what to watch.
     If an error occurs, return the error to the user verbatim.
     """,
+    auth=auth_provider,
 )
 
 # -----------------------------------------------------------------------------

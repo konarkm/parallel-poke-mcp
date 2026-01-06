@@ -43,6 +43,7 @@ Set these environment variables in your deployment platform:
 | `POKE_API_KEY` | Yes | Your Poke API key from [poke.com/settings/advanced](https://poke.com/settings/advanced) |
 | `WEBHOOK_BASE_URL` | Yes | Your deployed server URL (e.g., `https://your-app.onrender.com`) |
 | `PARALLEL_WEBHOOK_SECRET` | No | Webhook signing secret for verification (recommended) |
+| `MCP_AUTH_TOKEN` | No | If set, MCP clients must send `Authorization: Bearer <token>` |
 
 ## Connect to Poke
 
@@ -58,6 +59,16 @@ Set these environment variables in your deployment platform:
 | `/mcp` | MCP protocol endpoint (Poke connects here) |
 | `/webhook/parallel` | Receives webhooks from Parallel monitors |
 | `/health` | Health check for load balancers |
+
+## MCP Auth (Optional)
+
+If you set `MCP_AUTH_TOKEN`, the MCP endpoint requires a bearer token:
+
+```
+Authorization: Bearer <your token>
+```
+
+If your MCP client supports auth (e.g., Poke), configure the same token there.
 
 ## MCP Tools
 
