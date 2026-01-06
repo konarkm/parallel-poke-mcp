@@ -13,7 +13,7 @@ import hashlib
 import hmac
 import math
 import os
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -226,6 +226,40 @@ async def parallel_webhook(request: Request) -> JSONResponse:
         or payload.get("event_group_id")
     )
     if not monitor_id or not event_group_id:
+        # Handle non-detected event types (completed/failed) that don't include event_group_id
+        event_type = payload.get("type", "")
+        if event_type in ("monitor.execution.completed", "monitor.execution.failed"):
+            try:
+                monitor = fetch_monitor(monitor_id)
+            except Exception as e:
+                print(f"Error fetching monitor for completion/failure: {e}")
+                return JSONResponse({"error": "Failed to fetch monitor details"}, status_code=502)
+
+            monitor_query = monitor.get("query", "Unknown query")
+            monitor_cadence = monitor.get("cadence", "unknown")
+
+            message_parts = [
+                "Monitor Alert from Parallel",
+                f"Query: {monitor_query}",
+                f"Cadence: {monitor_cadence}",
+                "",
+            ]
+
+            if event_type == "monitor.execution.completed":
+                message_parts.append("Monitor run completed with no detected events.")
+            else:
+                message_parts.append("Monitor run failed.")
+
+            if isinstance(event, dict) and event:
+                message_parts.append("")
+                message_parts.append(f"Event details: {event}")
+
+            message_parts.append("")
+            message_parts.append(f"Monitor ID: {monitor_id}")
+
+            send_to_poke("\n".join(message_parts))
+            return JSONResponse({"status": "ok", "event_type": event_type})
+
         return JSONResponse(
             {"error": "Missing monitor_id or event_group_id"},
             status_code=400,
@@ -430,6 +464,8 @@ def get_monitor(monitor_id: str) -> dict:
                 "status": monitor.get("status"),
                 "webhook": monitor.get("webhook"),
                 "created_at": monitor.get("created_at"),
+                "last_run_at": monitor.get("last_run_at"),
+                "metadata": monitor.get("metadata"),
             }
     except httpx.HTTPStatusError as e:
         return {"error": f"Failed to get monitor: {e.response.text}"}
@@ -437,10 +473,13 @@ def get_monitor(monitor_id: str) -> dict:
         return {"error": f"Failed to get monitor: {str(e)}"}
 
 
-@mcp.tool(description="Update a monitor. Currently supports cadence (hourly/daily/weekly).")
+@mcp.tool(description="Update a monitor (cadence, webhook_url/event_types, metadata).")
 def update_monitor(
     monitor_id: str,
     cadence: Optional[str] = None,
+    webhook_url: Optional[str] = None,
+    webhook_event_types: Optional[List[str]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> dict:
     """
     Update a monitor's settings.
@@ -448,6 +487,10 @@ def update_monitor(
     Args:
         monitor_id: The ID of the monitor to update.
         cadence: New cadence - "hourly", "daily", or "weekly"
+        webhook_url: New webhook URL for this monitor.
+        webhook_event_types: Optional list of event types to subscribe to.
+                             Defaults to ["monitor.event.detected"] if not provided with webhook_url.
+        metadata: Optional dictionary of user-provided metadata to store with the monitor.
 
     Returns:
         Updated monitor details.
@@ -458,9 +501,38 @@ def update_monitor(
     if cadence and cadence not in ("hourly", "daily", "weekly"):
         return {"error": f"Invalid cadence '{cadence}'. Must be hourly, daily, or weekly."}
 
-    update_data = {}
+    update_data: Dict[str, Any] = {}
     if cadence:
         update_data["cadence"] = cadence
+
+    if webhook_event_types is not None:
+        if not isinstance(webhook_event_types, list) or not webhook_event_types:
+            return {"error": "webhook_event_types must be a non-empty list"}
+        allowed = {
+            "monitor.event.detected",
+            "monitor.execution.completed",
+            "monitor.execution.failed",
+        }
+        invalid = [t for t in webhook_event_types if t not in allowed]
+        if invalid:
+            return {
+                "error": "Invalid webhook_event_types. Allowed: "
+                + ", ".join(sorted(allowed))
+            }
+
+    if webhook_url:
+        update_data["webhook"] = {
+            "url": webhook_url,
+            "event_types": webhook_event_types or ["monitor.event.detected"],
+        }
+    elif webhook_event_types is not None:
+        return {"error": "webhook_url is required when webhook_event_types is provided"}
+
+    if metadata is not None:
+        if not isinstance(metadata, dict):
+            return {"error": "metadata must be an object/dict"}
+        # Parallel API expects string values for metadata.
+        update_data["metadata"] = {str(k): str(v) for k, v in metadata.items()}
 
     if not update_data:
         return {"error": "No updates specified"}
@@ -478,6 +550,8 @@ def update_monitor(
                 "success": True,
                 "id": monitor.get("monitor_id"),
                 "cadence": monitor.get("cadence"),
+                "webhook": monitor.get("webhook"),
+                "metadata": monitor.get("metadata"),
                 "message": "Monitor updated successfully",
             }
     except httpx.HTTPStatusError as e:

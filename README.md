@@ -68,9 +68,17 @@ The server exposes these tools to Poke:
 | `create_monitor` | Create a new monitor with a query and cadence (hourly/daily/weekly) |
 | `list_monitors` | List all your active monitors |
 | `get_monitor` | Get details of a specific monitor |
-| `update_monitor` | Update a monitor's cadence |
+| `update_monitor` | Update a monitor (cadence, webhook, metadata) |
 | `delete_monitor` | Delete a monitor |
 | `list_recent_events` | Get recent events across monitors |
+
+Webhook event types supported by the API:
+- `monitor.event.detected`
+- `monitor.execution.completed`
+- `monitor.execution.failed`
+
+Use `update_monitor` to set `webhook_event_types` if you want completion/failure notifications.
+Metadata values must be strings (Parallel API requirement).
 
 ## Local Development
 
